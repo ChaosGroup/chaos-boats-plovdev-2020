@@ -1,8 +1,4 @@
 {
-	"DanHook": {
-		"name": "Dan Hook",
-		"worker": "players/engdante.js"
-	},
 	"Dummy": {
 		"name": "Dummy",
 		"worker": "players/Dummy.js"
@@ -22,5 +18,9 @@
 	"DavyJones": {
 		"name": "Davy Jones",
 		"worker": "players/DavyJones.js"
-	}
+	},
+	"DanHook": {
+		"name": "Dan Hook",
+		"worker": "players/engdante.js"
+	},
 }
