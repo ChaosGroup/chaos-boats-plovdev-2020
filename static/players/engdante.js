@@ -3,91 +3,68 @@ const onGameMessage = (typeof importScripts === 'function'
 	: require('./port')
 ).port;
 
-var counter = 0;
-var oMoral = 1.0;
-let captain = [0,0,12]; // speed, rudder, fireSector
-const zeroarray = [0,0,0];
+const RANGE_CLOSE = 80;
+const RANGE_FAR = 125;
+const RANGE_AWAY = 150;
 
-onGameMessage(({ ownShip, targets }) => {
-	counter =  counter + 1;
-	oMoral = moralStatus (ownShip.health, targets[0].health);
-	captain = zeroarray;
-	captain = collisionCheck(ownShip, captain);
-	captain = fire(targets, captain);
-	captain = moving(ownShip,targets, captain)
-	//console.log(captain[2]);
-	// const closestTargets = targets.filter(t => t.range < 90).sort((a, b) => a.range - b.range);
-	//const fireSector = closestTargets.length > 0 ? closestTargets[0].bearingSector : 0;
-	// const haveTargetInProximity = closestTargets.length > 0 && closestTargets[0].range < 30;
+const MOVE_NORMAL = [0, -2, -1, 0, 1, 2, 3, -3, -2, 0, 1, 2, 3];
+const MOVE_FAR = [0, 1, 2, 3, 3, 3, 3, 3, -3, -3, -2, -1, -1];
+const MOVE_CLOSE = [0, -3, -3, -3, -2, -2, 0, 2, 2, 3, 3, 3, 3];
+const MOVE_HIGH_MORAL = [0, 1, 2, 3, 3, 3, 3, 3, -3, -3, -2, -1, -1];
+const MOVE_LOW_MORAL = [0, -3, -3, -3, -2, -2, 0, 2, 2, 3, 3, 3, 3];
+const COLLISION = [0, -3, -3, -2, 0, 0, 0, 0, 0, 2, 3, 3, 3];
 
-	// 0 -> 6
-	// let speed = haveTargetInProximity ? 6 : getRandomIntInclusive(2, 5);
-
-	// -3 <- 0 -> +3
-	// let rudder = getRandomIntInclusive(-2, +2);
-	// against ship or land
-	// if (ownShip.blockedSector) {
-	// 	speed = 6; // max speed
-
-	// 	if (ownShip.blockedSector === 12) {
-	// 		// in front, pick right or sometimes left
-	// 		rudder = 3 * getRandomIntInclusive(1, 10) > 3 ? 1 : -1;
-	// 	} else if (ownShip.blockedSector >= 9) {
-	// 		// at left, turn right
-	// 		rudder = 3;
-	// 	} else if (ownShip.blockedSector <= 3) {
-	// 		// at right, turn left
-	// 		rudder = -3;
-	// 	}
-	speed = captain[0];
-	rudder = captain[1];
-	fireSector = captain[2];
-	// console.log(targets[0].speed, targets[0].range, targets[0].bowSector);
-//}
-
+onGameMessage(({ ownShip, targets: [target] }) => {
 	return {
-		speed,
-		rudder,
-		fireSector,
+		...move(ownShip, target),
+		fireSector: target.bearingSector,
 	};
 });
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
-function getRandomIntInclusive(min, max) {
-	min = Math.ceil(min);
-	max = Math.floor(max);
-	return Math.floor(Math.random() * (max - min + 1) + min);
-}
+function move(ownShip, target) {
+	const moral = ownShip.score + target.score > 30 ? ownShip.score / target.score : 1;
 
-function moralStatus(oHelth, tHelth) {
-	return oHelth /tHelth;
-}
+	let rudder = 0;
+	let speed = 0;
 
-function collisionCheck(ship, arr) {
-	// console.log(ship.blockedSector);
-	if (ship.blockedSector > 0) {
-		console.log(ship.blockedSector);
-		arr[1] = 12 - ship.blockedSector;
-		arr[0] = 6;
+	if ((moral > 0.75) && (moral < 1.25)) {
+		if ((target.range < RANGE_AWAY) && (target.range > RANGE_CLOSE)) {
+			rudder = MOVE_NORMAL[target.bearingSector];
+			speed = 4;
+		}
+
+		if (target.range <= RANGE_CLOSE) {
+			rudder = MOVE_CLOSE[target.bearingSector];
+			speed = 6;
+		}
+
+		if (target.range >= RANGE_AWAY) {
+			rudder = MOVE_FAR[target.bearingSector];
+			speed = 6;
+		}
 	}
-	return arr;
-}
 
-function fire(ships, arr) {
-	// var k1 = ships[0].speed / 12;
-	// var k2 = ships[0].bowSector / 6;
-	arr[2] = ships[0].bearingSector;
-	// console.log(ships[0].bowSector, arr[2]);
-	if (ships[0].range > 115) {
-		arr[2] = 0;
+	if (moral <= 0.9) {
+		if (target.range < RANGE_FAR) {
+			rudder = MOVE_LOW_MORAL[target.bearingSector];
+			speed = 6;
+		}
+
+		if (target.range >= RANGE_FAR) {
+			rudder = MOVE_LOW_MORAL[target.bearingSector];
+			speed = 0;
+		}
 	}
-	return arr;
-}
 
-function moving(ship, ships, arr) {
-	if (arr[0] == zeroarray[0]  & arr[1]  == zeroarray[1]) {
-		console.log(ship.speed, ships[0].speed);
+	if (moral >= 1.25) {
+		rudder = MOVE_HIGH_MORAL[target.bearingSector];
+		speed = 6;
 	}
-	return arr;
-}
 
+	if (ownShip.blockedSector > 0) {
+		rudder = COLLISION[ownShip.blockedSector];
+		speed = 6;
+	}
+
+	return { rudder, speed };
+}
