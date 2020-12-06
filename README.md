@@ -1,4 +1,6 @@
-<div align="center" style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
+## All the fun is happening now at [chaos-boats](https://github.com/ChaosGroup/chaos-boats) repo!
+
+<div align="center">
 
 ![Chaos Logo](images/chaos_logo.png) ![PlovDev Logo](images/plovdev_logo.png)
 
